@@ -30,7 +30,7 @@ impl MainScene {
         log::info!("view");
         let range: Range<usize> = self.scroll_offset as usize .. self.scroll_offset as usize + 100;
         let now = Instant::now();
-        let diffs: HashSet<(usize, usize)> = get_diffs(&self.hexdata1, &self.hexdata2);
+        let diffs: HashSet<(usize, usize)> = get_diffs(&self.hexdata1[range.clone()], &self.hexdata2[range.clone()]);
         log::info!("Getting diffs took {:?}", Instant::now()-now);
 
         let mut columns_display: Column<Msg> = Column::new();
