@@ -1,8 +1,10 @@
 mod scene;
 mod scrollbar;
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 use iced::{Application, Color, Command, Element, Event, Font, Pixels, Size, Subscription};
 use iced::Settings;
 use biologischer_log::{init_logger, CustomLogger};
@@ -11,7 +13,7 @@ use iced::mouse::Event::WheelScrolled;
 use iced::widget::text_editor;
 use iced::widget::text_editor::Content;
 use once_cell::sync::Lazy;
-use crate::scene::{load_data_file_hex, MainScene, COL_COUNT, FONT_SIZE};
+use crate::scene::{get_diffs, load_data_file_hex, MainScene, COL_COUNT, FONT_SIZE};
 
 #[derive(Debug, Clone)]
 enum Msg {
@@ -35,12 +37,7 @@ struct MyAppFlags {
     logger: Arc<CustomLogger>,
 }
 
-const COLOR_TEXT1: Lazy<Color> = Lazy::new(|| Color::new(0.906, 0.890, 0.835, 1.0));
-const COLOR_TEXT2: Lazy<Color> = Lazy::new(|| Color::new(0.576, 0.573, 0.569, 1.0));
-const COLOR_TEXT_RED: Lazy<Color> = Lazy::new(|| Color::new(0.929, 0.192, 0.122, 1.0));
-
-
-const WINDOW_SIZE: Size = Size { width: 600.0, height: 900.0 };
+const WINDOW_SIZE: Size = Size { width: 800.0, height: 900.0 };
 
 impl Application for MyApp {
     type Executor = iced::executor::Default;
@@ -49,13 +46,21 @@ impl Application for MyApp {
     type Flags = MyAppFlags;
 
     fn new(flags: Self::Flags) -> (MyApp, Command<Msg>) {
-        log::info!("main");
+        log::info!("Started");
+
+        let start = Instant::now();
         let hexdata1: Vec<[String; COL_COUNT]> = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data.win"))
             .expect("Could not data file 1");
-        log::info!("loaded data 1");
+        log::info!("Loading data file 1 took {:?}", Instant::now() - start);
+
+        let start = Instant::now();
         let hexdata2: Vec<[String; COL_COUNT]> = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data_out.win"))
             .expect("Could not data file 2");
-        log::info!("loaded data 2");
+        log::info!("Loading data file 2 took {:?}", Instant::now() - start);
+
+        let start = Instant::now();
+        let diffs: HashSet<(usize, usize)> = get_diffs(&hexdata1, &hexdata2);
+        log::info!("Generating diffs took {:?}", Instant::now() - start);
 
         (
             Self {
@@ -69,6 +74,7 @@ impl Application for MyApp {
                     window_width: WINDOW_SIZE.width,
                     window_height: WINDOW_SIZE.height,
                     scroll_drag_start: None,
+                    diffs,
                 }
             },
             Command::none()

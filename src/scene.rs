@@ -21,27 +21,26 @@ pub struct MainScene {
     pub scroll_offset: f32,
     pub window_width: f32,
     pub window_height: f32,
+    pub diffs: HashSet<(usize, usize)>,
 }
 
 
 impl MainScene {
     pub fn update_scene(&mut self, message: Msg) -> Command<Msg> {
-        log::info!("update {message:?}");
         match message {
             Msg::KeyPress(Key::Named(ArrowDown)) => {
                 self.scroll_offset += 1.0;
-                self.scroll_offset = self.scroll_offset.min(self.max_scroll_offset);
+                self.clamp_viewport();
             }
 
             Msg::KeyPress(Key::Named(ArrowUp)) => {
                 self.scroll_offset -= 1.0;
-                self.scroll_offset = self.scroll_offset.max(0.0);
+                self.clamp_viewport();
             }
 
             Msg::Scroll(amount) => {
                 self.scroll_offset -= amount * 10.0;
-                self.scroll_offset = self.scroll_offset.min(self.max_scroll_offset);
-                self.scroll_offset = self.scroll_offset.max(0.0);
+                self.clamp_viewport();
             }
 
             Msg::WindowResized(width, height) => {
@@ -58,10 +57,8 @@ impl MainScene {
             }
 
             Msg::DragScrollbar(y) => {
-                log::warn!("drag scrollbar {y}");
                 self.scroll_offset = y/self.window_height * self.max_scroll_offset;
-                self.scroll_offset = self.scroll_offset.min(self.max_scroll_offset);
-                self.scroll_offset = self.scroll_offset.max(0.0);
+                self.clamp_viewport();
             }
 
             _ => {}
@@ -69,18 +66,19 @@ impl MainScene {
         Command::none()
     }
 
+    pub fn clamp_viewport(&mut self) {
+        self.scroll_offset = self.scroll_offset.min(self.max_scroll_offset - self.window_height);
+        self.scroll_offset = self.scroll_offset.max(0.0);
+    }
+
     pub fn view_scene(&self) -> Element<Msg> {
-        log::info!("view");
-        let range: Range<usize> = self.scroll_offset as usize .. self.scroll_offset as usize + 100;
-        let now = Instant::now();
-        let diffs: HashSet<(usize, usize)> = get_diffs(&self.hexdata1[range.clone()], &self.hexdata2[range.clone()]);
-        log::info!("Getting diffs took {:?}", Instant::now()-now);
+        let range: Range<usize> = self.scroll_offset as usize .. (self.scroll_offset + 100.0).min(self.max_scroll_offset) as usize;
 
         let mut columns_display: Column<Msg> = Column::new();
         columns_display = columns_display.push(text("").font(Font::MONOSPACE).size(FONT_SIZE));
         for i in range.clone() {
             columns_display = columns_display.push(
-                text(format!("{i:03}"))
+                text(format!("{:>8}", i*COL_COUNT))
                     .font(Font::MONOSPACE)
                     .size(FONT_SIZE)
                     .style(Color::from_rgb(0.69, 0.71, 0.72))
@@ -100,10 +98,8 @@ impl MainScene {
             rows_display2 = rows_display2.push(elem);
         }
 
-        let now = Instant::now();
-        let rendered_lines1: Element<Msg> = render_lines(&self.hexdata1[range.clone()], diffs.clone());
-        let rendered_lines2: Element<Msg> = render_lines(&self.hexdata2[range.clone()], diffs.clone());
-        log::info!("Rendering hexdumps took {:?}", Instant::now()-now);
+        let rendered_lines1: Element<Msg> = render_lines(&self.hexdata1, &self.diffs, range.clone());
+        let rendered_lines2: Element<Msg> = render_lines(&self.hexdata2, &self.diffs, range.clone());
 
         let scrollbar: Element<Msg> = self.render_scrollbar();
 
@@ -137,7 +133,7 @@ impl MainScene {
 
 
 pub const COL_COUNT: usize = 16;
-pub const FONT_SIZE: f32 = 14.0;
+pub const FONT_SIZE: f32 = 11.0;
 
 pub fn load_data_file_hex(path: &PathBuf) -> Result<Vec<[String; COL_COUNT]>, String> {
     let data: Vec<u8> = fs::read(path)
@@ -166,7 +162,7 @@ pub fn load_data_file_hex(path: &PathBuf) -> Result<Vec<[String; COL_COUNT]>, St
     Ok(chunks)
 }
 
-fn get_diffs(lines1: &[[String; COL_COUNT]], lines2: &[[String; COL_COUNT]]) -> HashSet<(usize, usize)> {
+pub fn get_diffs(lines1: &[[String; COL_COUNT]], lines2: &[[String; COL_COUNT]]) -> HashSet<(usize, usize)> {
     let mut diffs = HashSet::with_capacity(lines1.len() * COL_COUNT / 10); // heuristic
 
     for (i, (line1, line2)) in lines1.iter().zip(lines2).enumerate() {
@@ -180,14 +176,14 @@ fn get_diffs(lines1: &[[String; COL_COUNT]], lines2: &[[String; COL_COUNT]]) -> 
     diffs
 }
 
-fn render_lines(lines: &[[String; COL_COUNT]], diffs: HashSet<(usize, usize)>) -> Element<Msg> {
+fn render_lines<'a>(lines: &'a Vec<[String; COL_COUNT]>, diffs: &'a HashSet<(usize, usize)>, range: Range<usize>) -> Element<'a, Msg> {
     let mut column: Column<Msg> = Column::new();
 
-    for (i, line) in lines.iter().enumerate() {
+    for (i, line) in lines[range.clone()].iter().enumerate() {
         let mut row: Row<Msg> = Row::new();
 
         for (j, byte) in line.iter().enumerate() {
-            let color = if diffs.contains(&(i, j)) {
+            let color = if diffs.contains(&(i + range.start, j)) {
                 Color::from_rgb(0.95, 0.11, 0.09)
             } else {
                 Color::from_rgb(0.94, 0.93, 0.91)
