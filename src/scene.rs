@@ -1,8 +1,7 @@
 ﻿use std::fs;
 use std::path::PathBuf;
 use iced::{Command, Element};
-use iced::widget::{container, row, column, Space, text_editor};
-use iced::widget::text_editor::Content;
+use iced::widget::{container, row, Space, Column, text};
 use crate::Msg;
 
 
@@ -10,8 +9,8 @@ use crate::Msg;
 pub struct MainScene {
     // pub data1: Vec<u8>,
     // pub data2: Vec<u8>,
-    pub hexdata1: Content,
-    pub hexdata2: Content,
+    pub hexdata1: Vec<String>,
+    pub hexdata2: Vec<String>,
 }
 
 
@@ -27,27 +26,23 @@ impl MainScene {
 
     pub fn view_scene(&self) -> Element<Msg> {
         log::info!("view");
+
         container(
             row![
-                column![
-                    text_editor(&self.hexdata1)
-                        .on_action(Msg::EditData1)
-                ],
+                render_lines(&self.hexdata1),
                 Space::with_width(10),
-                column![
-                    text_editor(&self.hexdata2)
-                        .on_action(Msg::EditData2)
-                ],
+                render_lines(&self.hexdata2),
             ]
         ).into()
     }
 }
 
 
-pub(crate) fn load_data_file_hex(path: &PathBuf) -> Result<String, String> {
+pub fn load_data_file_hex(path: &PathBuf) -> Result<Vec<String>, String> {
+    const COL_COUNT: usize = 16;
+
     let data: Vec<u8> = fs::read(path)
         .map_err(|e| format!("Failed to read data file at {path:?}: {e}"))?;
-        // .split_off(420);    // todo
 
     let mut result: Vec<u8> = Vec::with_capacity(data.len() * 3 - 1);
     for (i, &b) in data.iter().enumerate() {
@@ -57,8 +52,22 @@ pub(crate) fn load_data_file_hex(path: &PathBuf) -> Result<String, String> {
             result.push(b' ');
         }
     }
-    // SAFETY: All values pushed are valid ASCII, so this is safe.
-    Ok(unsafe { String::from_utf8_unchecked(result) })
+
+    let mut lines: Vec<String> = Vec::with_capacity(result.len() / COL_COUNT + 1);
+    let mut i: usize = 0;
+    loop {
+        let end: usize = result.len().min(i + COL_COUNT);
+        let slice: &[u8] = &result[i..end];
+        // SAFETY: All values pushed are valid ASCII, so this is safe.
+        let string: &str = unsafe { std::str::from_utf8_unchecked(slice) };
+        lines.push(string.to_string());
+
+        if i + COL_COUNT > result.len() {
+            return Ok(lines)
+        }
+        i += COL_COUNT;
+    }
+
 }
 
 
@@ -79,4 +88,12 @@ C0 C1 C2 C3 C4 C5 C6 C7 C8 C9 CA CB CC CD CE CF \
 D0 D1 D2 D3 D4 D5 D6 D7 D8 D9 DA DB DC DD DE DF \
 E0 E1 E2 E3 E4 E5 E6 E7 E8 E9 EA EB EC ED EE EF \
 F0 F1 F2 F3 F4 F5 F6 F7 F8 F9 FA FB FC FD FE FF";
+
+
+fn render_lines(lines: &Vec<String>) -> Element<Msg> {
+    lines.iter().fold(Column::new(), |col, line| col.push(text(line)))
+        .spacing(0)
+        .padding(0)
+        .into()
+}
 

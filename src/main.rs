@@ -43,10 +43,10 @@ impl Application for MyApp {
 
     fn new(flags: Self::Flags) -> (MyApp, Command<Msg>) {
         log::info!("main");
-        let hexdata1: String = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data.win"))
+        let hexdata1: Vec<String> = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data.win"))
             .expect("Could not data file 1");
         log::info!("loaded data 1");
-        let hexdata2: String = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data_out.win"))
+        let hexdata2: Vec<String> = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data_out.win"))
             .expect("Could not data file 2");
         log::info!("loaded data 2");
 
@@ -54,7 +54,7 @@ impl Application for MyApp {
             Self {
                 main_window_id: flags.main_window_id,
                 logger: flags.logger,
-                scene: MainScene { hexdata1: Content::with_text(&hexdata1), hexdata2: Content::with_text(&hexdata2) }
+                scene: MainScene { hexdata1, hexdata2 }
             },
             Command::none()
         )
