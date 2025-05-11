@@ -2,7 +2,7 @@
 use std::fs;
 use std::ops::Range;
 use std::path::PathBuf;
-use iced::{Application, Color, Command, Element, Font, Length};
+use iced::{Color, Command, Element, Font, Length};
 use iced::keyboard::Key;
 use iced::keyboard::key::Named::{ArrowDown, ArrowUp};
 use iced::widget::{container, row, Space, Column, text, Row, column};

@@ -23,15 +23,7 @@ enum Msg {
 }
 
 struct MyApp {
-    main_window_id: iced::window::Id,
-    logger: Arc<CustomLogger>,
     scene: MainScene,
-}
-
-#[derive(Clone)]
-struct MyAppFlags {
-    main_window_id: iced::window::Id,
-    logger: Arc<CustomLogger>,
 }
 
 const WINDOW_SIZE: Size = Size { width: 800.0, height: 900.0 };
@@ -40,9 +32,9 @@ impl Application for MyApp {
     type Executor = iced::executor::Default;
     type Message = Msg;
     type Theme = iced::Theme;
-    type Flags = MyAppFlags;
+    type Flags = ();
 
-    fn new(flags: Self::Flags) -> (MyApp, Command<Msg>) {
+    fn new(_flags: Self::Flags) -> (MyApp, Command<Msg>) {
         log::info!("Started");
 
         let start = Instant::now();
@@ -61,8 +53,6 @@ impl Application for MyApp {
 
         (
             Self {
-                main_window_id: flags.main_window_id,
-                logger: flags.logger,
                 scene: MainScene {
                     max_scroll_offset: hexdata1.len().min(hexdata2.len()) as f32,
                     hexdata1,
@@ -137,7 +127,7 @@ impl Application for MyApp {
 }
 
 pub fn main() -> iced::Result {
-    let logger: Arc<CustomLogger> = init_logger(env!("CARGO_PKG_NAME"));
+    let _logger: Arc<CustomLogger> = init_logger(env!("CARGO_PKG_NAME"));
 
     let window_settings = iced::window::Settings {
         size: WINDOW_SIZE,
@@ -157,10 +147,7 @@ pub fn main() -> iced::Result {
     let settings = Settings {
         id: Some("HexCompare".to_string()),
         window: window_settings,
-        flags: MyAppFlags {
-            main_window_id: iced::window::Id::unique(),
-            logger,
-        },
+        flags: (),
         fonts: vec![],
         default_font: Font::DEFAULT,
         default_text_size: Pixels(10.0),
