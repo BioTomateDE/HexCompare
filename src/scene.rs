@@ -3,7 +3,7 @@ use std::fs;
 use std::ops::Range;
 use std::path::PathBuf;
 use iced::{Color, Command, Element, Font, Length};
-use iced::widget::{container, row, Space, Column, text, Row};
+use iced::widget::{container, row, Space, Column, text, Row, column};
 use crate::Msg;
 
 
@@ -30,11 +30,46 @@ impl MainScene {
         let range: Range<usize> = self.scroll_offset as usize .. self.scroll_offset as usize + 100;
         let diffs: HashSet<(usize, usize)> = get_diffs(&self.hexdata1, &self.hexdata2);
 
+        let mut columns_display: Column<Msg> = Column::new();
+        columns_display = columns_display.push(text("").font(Font::MONOSPACE).size(FONT_SIZE));
+        for i in range.clone() {
+            columns_display = columns_display.push(
+                text(format!("{i:03}"))
+                    .font(Font::MONOSPACE)
+                    .size(FONT_SIZE)
+                    .style(Color::from_rgb(0.69, 0.71, 0.72))
+            )
+        }
+
+        let mut rows_display1: Row<Msg> = Row::new();
+        let mut rows_display2: Row<Msg> = Row::new();
+
+        for i in 0..COL_COUNT {
+            let elem = text(format!("{i:02} "))
+                .font(Font::MONOSPACE)
+                .size(FONT_SIZE)
+                .style(Color::from_rgb(0.69, 0.71, 0.72));
+
+            rows_display1 = rows_display1.push(elem.clone());
+            rows_display2 = rows_display2.push(elem);
+        }
+
+
         container(
             row![
-                render_lines(&self.hexdata1[range.clone()], diffs.clone()),
-                Space::with_width(Length::Fill),
-                render_lines(&self.hexdata2[range], diffs),
+                columns_display,
+                Space::with_width(15),
+                column![
+                    rows_display1,
+                    Space::with_height(8),
+                    render_lines(&self.hexdata1[range.clone()], diffs.clone()),
+                ],
+                Space::with_width(18),
+                column![
+                    rows_display2,
+                    Space::with_height(8),
+                    render_lines(&self.hexdata2[range.clone()], diffs.clone()),
+                ],
             ]
         )
             .padding(20)
@@ -45,6 +80,7 @@ impl MainScene {
 
 
 pub const COL_COUNT: usize = 16;
+pub const FONT_SIZE: f32 = 14.0;
 
 pub fn load_data_file_hex(path: &PathBuf) -> Result<Vec<[String; COL_COUNT]>, String> {
     const COL_COUNT: usize = 16;
@@ -126,20 +162,20 @@ fn render_lines(lines: &[[String; COL_COUNT]], diffs: HashSet<(usize, usize)>) -
             let color = if diffs.contains(&(i, j)) {
                 Color::from_rgb(0.95, 0.11, 0.09)
             } else {
-                Color::from_rgb(0.96, 0.97, 0.94)
+                Color::from_rgb(0.94, 0.93, 0.91)
             };
 
             row = row.push(
                 text(byte.to_owned())
                     .style(color)
                     .font(Font::MONOSPACE)
-                    .size(16)
+                    .size(FONT_SIZE)
             );
             if j < line.len() - 1 {
                 row = row.push(
                     text(" ")
                         .font(Font::MONOSPACE)
-                        .size(16)
+                        .size(FONT_SIZE)
                 );
             }
         }

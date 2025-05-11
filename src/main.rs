@@ -79,7 +79,7 @@ pub fn main() -> iced::Result {
     let window_settings = iced::window::Settings {
         size: WINDOW_SIZE,
         position: iced::window::Position::Centered,
-        min_size: Some(Size{ width: 300.0, height: 500.0 }),
+        min_size: Some(Size{ width: 500.0, height: 500.0 }),
         max_size: None,
         visible: true,
         resizable: true,
