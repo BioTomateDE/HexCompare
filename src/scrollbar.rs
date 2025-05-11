@@ -5,7 +5,7 @@ use crate::Msg;
 use crate::scene::{MainScene, FONT_SIZE};
 
 impl MainScene {
-    fn render_scrollbar(&self) -> Element<Msg> {
+    pub fn render_scrollbar(&self) -> Element<Msg> {
         let thumb_height: f32 = (self.window_height / self.max_scroll_offset * FONT_SIZE).max(20.0);
         let scroll_ratio: f32 = self.scroll_offset / self.max_scroll_offset;
         let thumb_offset: f32 = scroll_ratio * (self.window_height - thumb_height);
@@ -25,8 +25,7 @@ impl MainScene {
         let scrollbar = button(track_column)
             .width(Length::Fixed(20.0))
             .height(Length::Fixed(self.window_height))
-            .style(iced::theme::Button::Custom(Box::new(ScrollbarTrackButton)))
-            .on_press(Msg::StartScrollbarDrag); // If you want it to be clickable
+            .style(iced::theme::Button::Custom(Box::new(ScrollbarTrackButton)));
 
         scrollbar.into()
     }
@@ -52,12 +51,12 @@ impl button::StyleSheet for ScrollbarTrackButton {
     }
     fn hovered(&self, style: &Self::Style) -> button::Appearance {
         let mut appearance = self.active(style);
-        appearance.background = Some(Background::Color(Color::from_rgba(0.3, 0.3, 0.3, 0.4)));
+        appearance.background = Some(Background::Color(Color::from_rgba(0.24, 0.24, 0.24, 0.4)));
         appearance
     }
     fn pressed(&self, style: &Self::Style) -> button::Appearance {
         let mut appearance = self.hovered(style);
-        appearance.background = Some(Background::Color(Color::from_rgba(0.4, 0.4, 0.4, 0.6)));
+        appearance.background = Some(Background::Color(Color::from_rgba(0.3, 0.3, 0.3, 0.6)));
         appearance
     }
     fn disabled(&self, _style: &Self::Style) -> button::Appearance {

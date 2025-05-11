@@ -68,6 +68,7 @@ impl Application for MyApp {
                     scroll_offset: 0.0,
                     window_width: WINDOW_SIZE.width,
                     window_height: WINDOW_SIZE.height,
+                    scroll_drag_start: None,
                 }
             },
             Command::none()
@@ -86,6 +87,20 @@ impl Application for MyApp {
         iced::Theme::GruvboxDark
     }
     fn subscription(&self) -> Subscription<Msg> {
+        if self.scene.scroll_drag_start.is_some() {
+            return iced::event::listen_with(|event, _status| {
+                match event {
+                    Event::Mouse(iced::mouse::Event::CursorMoved {position}) => {
+                        Some(Msg::DragScrollbar(position.y))
+                    }
+                    Event::Mouse(iced::mouse::Event::ButtonReleased(iced::mouse::Button::Left)) => {
+                        Some(Msg::EndScrollbarDrag)
+                    }
+                    _ => None,
+                }
+            })
+        }
+
         iced::event::listen_with(|event, _status| {
             match event {
                 Event::Keyboard(key_event) => {
@@ -106,6 +121,10 @@ impl Application for MyApp {
 
                 Event::Window(_id, iced::window::Event::Resized { width, height }) => {
                     Some(Msg::WindowResized(width, height))
+                }
+
+                Event::Mouse(iced::mouse::Event::ButtonPressed(iced::mouse::Button::Left)) => {
+                    Some(Msg::StartScrollbarDrag)
                 }
 
                 _ => None,

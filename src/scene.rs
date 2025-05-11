@@ -16,6 +16,7 @@ use crate::Msg;
 pub struct MainScene {
     pub hexdata1: Vec<[String; COL_COUNT]>,
     pub hexdata2: Vec<[String; COL_COUNT]>,
+    pub scroll_drag_start: Option<f32>,
     pub max_scroll_offset: f32,
     pub scroll_offset: f32,
     pub window_width: f32,
@@ -46,6 +47,21 @@ impl MainScene {
             Msg::WindowResized(width, height) => {
                 self.window_width = width as f32;
                 self.window_height = height as f32;
+            }
+
+            Msg::StartScrollbarDrag => {
+                self.scroll_drag_start = Some(self.scroll_offset);
+            }
+
+            Msg::EndScrollbarDrag => {
+                self.scroll_drag_start = None;
+            }
+
+            Msg::DragScrollbar(y) => {
+                log::warn!("drag scrollbar {y}");
+                self.scroll_offset = y/self.window_height * self.max_scroll_offset;
+                self.scroll_offset = self.scroll_offset.min(self.max_scroll_offset);
+                self.scroll_offset = self.scroll_offset.max(0.0);
             }
 
             _ => {}
@@ -89,6 +105,7 @@ impl MainScene {
         let rendered_lines2: Element<Msg> = render_lines(&self.hexdata2[range.clone()], diffs.clone());
         log::info!("Rendering hexdumps took {:?}", Instant::now()-now);
 
+        let scrollbar: Element<Msg> = self.render_scrollbar();
 
         container(
             row![
@@ -108,6 +125,8 @@ impl MainScene {
                     Space::with_height(8),
                     rendered_lines2,
                 ],
+                Space::with_width(Length::Fill),
+                scrollbar,
             ]
         )
             .padding(20)
