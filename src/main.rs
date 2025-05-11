@@ -54,7 +54,7 @@ impl Application for MyApp {
             Self {
                 main_window_id: flags.main_window_id,
                 logger: flags.logger,
-                scene: MainScene { hexdata1, hexdata2 }
+                scene: MainScene { hexdata1, hexdata2, scroll_offset: 0.0 }
             },
             Command::none()
         )

@@ -1,16 +1,15 @@
 ﻿use std::fs;
 use std::path::PathBuf;
-use iced::{Command, Element};
+use iced::{Command, Element, Font, Length};
 use iced::widget::{container, row, Space, Column, text};
 use crate::Msg;
 
 
 #[derive(Debug)]
 pub struct MainScene {
-    // pub data1: Vec<u8>,
-    // pub data2: Vec<u8>,
     pub hexdata1: Vec<String>,
     pub hexdata2: Vec<String>,
+    pub scroll_offset: f32,
 }
 
 
@@ -29,11 +28,13 @@ impl MainScene {
 
         container(
             row![
-                render_lines(&self.hexdata1),
-                Space::with_width(10),
-                render_lines(&self.hexdata2),
+                render_lines(&self.hexdata1[self.scroll_offset as usize .. self.scroll_offset as usize + 20]),
+                Space::with_width(Length::Fill),
+                render_lines(&self.hexdata2[self.scroll_offset as usize .. self.scroll_offset as usize + 20]),
             ]
-        ).into()
+        )
+            .padding(20)
+            .into()
     }
 }
 
@@ -56,18 +57,17 @@ pub fn load_data_file_hex(path: &PathBuf) -> Result<Vec<String>, String> {
     let mut lines: Vec<String> = Vec::with_capacity(result.len() / COL_COUNT + 1);
     let mut i: usize = 0;
     loop {
-        let end: usize = result.len().min(i + COL_COUNT);
+        let end: usize = result.len().min(i + COL_COUNT*2+1);
         let slice: &[u8] = &result[i..end];
         // SAFETY: All values pushed are valid ASCII, so this is safe.
         let string: &str = unsafe { std::str::from_utf8_unchecked(slice) };
         lines.push(string.to_string());
 
-        if i + COL_COUNT > result.len() {
+        if i + COL_COUNT*2+1 > result.len() {
             return Ok(lines)
         }
-        i += COL_COUNT;
+        i += COL_COUNT*2+1;
     }
-
 }
 
 
@@ -90,8 +90,11 @@ E0 E1 E2 E3 E4 E5 E6 E7 E8 E9 EA EB EC ED EE EF \
 F0 F1 F2 F3 F4 F5 F6 F7 F8 F9 FA FB FC FD FE FF";
 
 
-fn render_lines(lines: &Vec<String>) -> Element<Msg> {
-    lines.iter().fold(Column::new(), |col, line| col.push(text(line)))
+fn render_lines(lines: &[String]) -> Element<Msg> {
+    lines.iter().fold(Column::new(), |col, line| col.push(
+        text(line)
+            .font(Font::MONOSPACE).size(16)
+    ))
         .spacing(0)
         .padding(0)
         .into()
