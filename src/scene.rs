@@ -1,14 +1,16 @@
-﻿use std::fs;
+﻿use std::collections::HashSet;
+use std::fs;
+use std::ops::Range;
 use std::path::PathBuf;
-use iced::{Command, Element, Font, Length};
-use iced::widget::{container, row, Space, Column, text};
+use iced::{Color, Command, Element, Font, Length};
+use iced::widget::{container, row, Space, Column, text, Row};
 use crate::Msg;
 
 
 #[derive(Debug)]
 pub struct MainScene {
-    pub hexdata1: Vec<String>,
-    pub hexdata2: Vec<String>,
+    pub hexdata1: Vec<[String; COL_COUNT]>,
+    pub hexdata2: Vec<[String; COL_COUNT]>,
     pub scroll_offset: f32,
 }
 
@@ -25,12 +27,14 @@ impl MainScene {
 
     pub fn view_scene(&self) -> Element<Msg> {
         log::info!("view");
+        let range: Range<usize> = self.scroll_offset as usize .. self.scroll_offset as usize + 100;
+        let diffs: HashSet<(usize, usize)> = get_diffs(&self.hexdata1, &self.hexdata2);
 
         container(
             row![
-                render_lines(&self.hexdata1[self.scroll_offset as usize .. self.scroll_offset as usize + 20]),
+                render_lines(&self.hexdata1[range.clone()], diffs.clone()),
                 Space::with_width(Length::Fill),
-                render_lines(&self.hexdata2[self.scroll_offset as usize .. self.scroll_offset as usize + 20]),
+                render_lines(&self.hexdata2[range], diffs),
             ]
         )
             .padding(20)
@@ -39,36 +43,45 @@ impl MainScene {
 }
 
 
-pub fn load_data_file_hex(path: &PathBuf) -> Result<Vec<String>, String> {
+
+pub const COL_COUNT: usize = 16;
+
+pub fn load_data_file_hex(path: &PathBuf) -> Result<Vec<[String; COL_COUNT]>, String> {
     const COL_COUNT: usize = 16;
 
     let data: Vec<u8> = fs::read(path)
         .map_err(|e| format!("Failed to read data file at {path:?}: {e}"))?;
 
-    let mut result: Vec<u8> = Vec::with_capacity(data.len() * 3 - 1);
-    for (i, &b) in data.iter().enumerate() {
-        let offset: usize = (b as usize) * 3;
-        result.extend_from_slice(&HEX_TABLE[offset..offset + 2]);
-        if i != data.len() - 1 {
-            result.push(b' ');
+    // Collect all hex byte strings first
+    let hex_strs: Vec<String> = data.iter()
+        .map(|b| format!("{:02X}", b))
+        .collect();
+
+    // Chunk into fixed-size arrays
+    let mut chunks: Vec<[String; COL_COUNT]> = Vec::new();
+    let mut i = 0;
+
+    while i + COL_COUNT <= hex_strs.len() {
+        let mut arr: [String; COL_COUNT] = std::array::from_fn(|_| String::new());
+        for j in 0..COL_COUNT {
+            arr[j] = hex_strs[i + j].clone();
         }
+        chunks.push(arr);
+        i += COL_COUNT;
     }
 
-    let mut lines: Vec<String> = Vec::with_capacity(result.len() / COL_COUNT + 1);
-    let mut i: usize = 0;
-    loop {
-        let end: usize = result.len().min(i + COL_COUNT*2+1);
-        let slice: &[u8] = &result[i..end];
-        // SAFETY: All values pushed are valid ASCII, so this is safe.
-        let string: &str = unsafe { std::str::from_utf8_unchecked(slice) };
-        lines.push(string.to_string());
-
-        if i + COL_COUNT*2+1 > result.len() {
-            return Ok(lines)
+    // Handle final partial chunk if needed
+    if i < hex_strs.len() {
+        let mut arr: [String; COL_COUNT] = std::array::from_fn(|_| String::new());
+        for j in 0..(hex_strs.len() - i) {
+            arr[j] = hex_strs[i + j].clone();
         }
-        i += COL_COUNT*2+1;
+        chunks.push(arr);
     }
+
+    Ok(chunks)
 }
+
 
 
 const HEX_TABLE: &[u8; 767] = b"\
@@ -90,11 +103,50 @@ E0 E1 E2 E3 E4 E5 E6 E7 E8 E9 EA EB EC ED EE EF \
 F0 F1 F2 F3 F4 F5 F6 F7 F8 F9 FA FB FC FD FE FF";
 
 
-fn render_lines(lines: &[String]) -> Element<Msg> {
-    lines.iter().fold(Column::new(), |col, line| col.push(
-        text(line)
-            .font(Font::MONOSPACE).size(16)
-    ))
+fn get_diffs(lines1: &[[String; COL_COUNT]], lines2: &[[String; COL_COUNT]]) -> HashSet<(usize, usize)> {
+    let mut diffs: HashSet<(usize, usize)> = HashSet::new();
+
+    for (i, (line1, line2)) in std::iter::zip(lines1, lines2).enumerate() {
+        for (j, (byte1, byte2)) in std::iter::zip(line1, line2).enumerate() {
+            if byte1 == byte2 { continue }
+            diffs.insert((i, j));
+        }
+    }
+
+    diffs
+}
+
+fn render_lines(lines: &[[String; COL_COUNT]], diffs: HashSet<(usize, usize)>) -> Element<Msg> {
+    let mut column: Column<Msg> = Column::new();
+
+    for (i, line) in lines.iter().enumerate() {
+        let mut row: Row<Msg> = Row::new();
+
+        for (j, byte) in line.iter().enumerate() {
+            let color = if diffs.contains(&(i, j)) {
+                Color::from_rgb(0.95, 0.11, 0.09)
+            } else {
+                Color::from_rgb(0.96, 0.97, 0.94)
+            };
+
+            row = row.push(
+                text(byte.to_owned())
+                    .style(color)
+                    .font(Font::MONOSPACE)
+                    .size(16)
+            );
+            if j < line.len() - 1 {
+                row = row.push(
+                    text(" ")
+                        .font(Font::MONOSPACE)
+                        .size(16)
+                );
+            }
+        }
+        column = column.push(row);
+    }
+
+    column
         .spacing(0)
         .padding(0)
         .into()

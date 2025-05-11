@@ -8,7 +8,7 @@ use biologischer_log::{init_logger, CustomLogger};
 use iced::widget::text_editor;
 use iced::widget::text_editor::Content;
 use once_cell::sync::Lazy;
-use crate::scene::{load_data_file_hex, MainScene};
+use crate::scene::{load_data_file_hex, MainScene, COL_COUNT};
 
 #[derive(Debug, Clone)]
 enum Msg {
@@ -43,10 +43,10 @@ impl Application for MyApp {
 
     fn new(flags: Self::Flags) -> (MyApp, Command<Msg>) {
         log::info!("main");
-        let hexdata1: Vec<String> = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data.win"))
+        let hexdata1: Vec<[String; COL_COUNT]> = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data.win"))
             .expect("Could not data file 1");
         log::info!("loaded data 1");
-        let hexdata2: Vec<String> = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data_out.win"))
+        let hexdata2: Vec<[String; COL_COUNT]> = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data_out.win"))
             .expect("Could not data file 2");
         log::info!("loaded data 2");
 
