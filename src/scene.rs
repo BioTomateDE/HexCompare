@@ -3,7 +3,11 @@ use std::fs;
 use std::ops::Range;
 use std::path::PathBuf;
 use std::time::Instant;
-use iced::{Color, Command, Element, Font, Length};
+use iced::{mouse, Color, Command, Element, Font, Length};
+use iced::Event::{Keyboard, Mouse};
+use iced::keyboard::Key;
+use iced::keyboard::key::Named::{ArrowDown, ArrowUp};
+use iced::mouse::ScrollDelta;
 use iced::widget::{container, row, Space, Column, text, Row, column};
 use crate::Msg;
 
@@ -12,6 +16,7 @@ use crate::Msg;
 pub struct MainScene {
     pub hexdata1: Vec<[String; COL_COUNT]>,
     pub hexdata2: Vec<[String; COL_COUNT]>,
+    pub max_scroll_offset: f32,
     pub scroll_offset: f32,
 }
 
@@ -20,8 +25,23 @@ impl MainScene {
     pub fn update_scene(&mut self, message: Msg) -> Command<Msg> {
         log::info!("update {message:?}");
         match message {
-            Msg::EditData1(action) => log::info!("edit data1: {}", action.is_edit()),
-            Msg::EditData2(action) => log::info!("edit data2: {}", action.is_edit()),
+            Msg::KeyPress(Key::Named(ArrowDown)) => {
+                self.scroll_offset += 1.0;
+                self.scroll_offset = self.scroll_offset.min(self.max_scroll_offset);
+            }
+
+            Msg::KeyPress(Key::Named(ArrowUp)) => {
+                self.scroll_offset -= 1.0;
+                self.scroll_offset = self.scroll_offset.max(0.0);
+            }
+
+            Msg::Scroll(amount) => {
+                self.scroll_offset -= amount * 10.0;
+                self.scroll_offset = self.scroll_offset.min(self.max_scroll_offset);
+                self.scroll_offset = self.scroll_offset.max(0.0);
+            }
+
+            _ => {}
         }
         Command::none()
     }

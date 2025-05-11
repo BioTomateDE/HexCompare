@@ -2,18 +2,20 @@ mod scene;
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use iced::{Application, Color, Command, Element, Font, Pixels, Size};
+use iced::{Application, Color, Command, Element, Event, Font, Pixels, Size, Subscription};
 use iced::Settings;
 use biologischer_log::{init_logger, CustomLogger};
+use iced::keyboard::Key;
+use iced::mouse::Event::WheelScrolled;
 use iced::widget::text_editor;
 use iced::widget::text_editor::Content;
 use once_cell::sync::Lazy;
-use crate::scene::{load_data_file_hex, MainScene, COL_COUNT};
+use crate::scene::{load_data_file_hex, MainScene, COL_COUNT, FONT_SIZE};
 
 #[derive(Debug, Clone)]
 enum Msg {
-    EditData1(text_editor::Action),
-    EditData2(text_editor::Action),
+    KeyPress(Key),
+    Scroll(f32),
 }
 
 struct MyApp {
@@ -54,7 +56,12 @@ impl Application for MyApp {
             Self {
                 main_window_id: flags.main_window_id,
                 logger: flags.logger,
-                scene: MainScene { hexdata1, hexdata2, scroll_offset: 0.0 }
+                scene: MainScene {
+                    max_scroll_offset: hexdata1.len().min(hexdata2.len()) as f32,
+                    hexdata1,
+                    hexdata2,
+                    scroll_offset: 0.0,
+                }
             },
             Command::none()
         )
@@ -70,6 +77,27 @@ impl Application for MyApp {
     }
     fn theme(&self) -> iced::Theme {
         iced::Theme::GruvboxDark
+    }
+    fn subscription(&self) -> Subscription<Msg> {
+        iced::event::listen_with(|event, _status| {
+            match event {
+                Event::Keyboard(key_event) => {
+                    if let iced::keyboard::Event::KeyPressed { key, .. } = key_event {
+                        Some(Msg::KeyPress(key))
+                    } else {
+                        None
+                    }
+                }
+                Event::Mouse(WheelScrolled { delta, .. }) => {
+                    let amount = match delta {
+                        iced::mouse::ScrollDelta::Lines { y, .. } => y,
+                        iced::mouse::ScrollDelta::Pixels { y, .. } => y / FONT_SIZE,
+                    };
+                    Some(Msg::Scroll(amount))
+                }
+                _ => None,
+            }
+        })
     }
 }
 
