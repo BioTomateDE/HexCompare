@@ -2,6 +2,7 @@
 use std::fs;
 use std::ops::Range;
 use std::path::PathBuf;
+use std::time::Instant;
 use iced::{Color, Command, Element, Font, Length};
 use iced::widget::{container, row, Space, Column, text, Row, column};
 use crate::Msg;
@@ -28,7 +29,9 @@ impl MainScene {
     pub fn view_scene(&self) -> Element<Msg> {
         log::info!("view");
         let range: Range<usize> = self.scroll_offset as usize .. self.scroll_offset as usize + 100;
+        let now = Instant::now();
         let diffs: HashSet<(usize, usize)> = get_diffs(&self.hexdata1, &self.hexdata2);
+        log::info!("Getting diffs took {:?}", Instant::now()-now);
 
         let mut columns_display: Column<Msg> = Column::new();
         columns_display = columns_display.push(text("").font(Font::MONOSPACE).size(FONT_SIZE));
@@ -54,21 +57,29 @@ impl MainScene {
             rows_display2 = rows_display2.push(elem);
         }
 
+        let now = Instant::now();
+        let rendered_lines1: Element<Msg> = render_lines(&self.hexdata1[range.clone()], diffs.clone());
+        let rendered_lines2: Element<Msg> = render_lines(&self.hexdata2[range.clone()], diffs.clone());
+        log::info!("Rendering hexdumps took {:?}", Instant::now()-now);
+
 
         container(
             row![
-                columns_display,
+                column![
+                    Space::with_height(8),
+                    columns_display,
+                ],
                 Space::with_width(15),
                 column![
                     rows_display1,
                     Space::with_height(8),
-                    render_lines(&self.hexdata1[range.clone()], diffs.clone()),
+                    rendered_lines1,
                 ],
                 Space::with_width(18),
                 column![
                     rows_display2,
                     Space::with_height(8),
-                    render_lines(&self.hexdata2[range.clone()], diffs.clone()),
+                    rendered_lines2,
                 ],
             ]
         )
@@ -83,41 +94,31 @@ pub const COL_COUNT: usize = 16;
 pub const FONT_SIZE: f32 = 14.0;
 
 pub fn load_data_file_hex(path: &PathBuf) -> Result<Vec<[String; COL_COUNT]>, String> {
-    const COL_COUNT: usize = 16;
-
-    let data: Vec<u8> = fs::read(path)
+    let data = fs::read(path)
         .map_err(|e| format!("Failed to read data file at {path:?}: {e}"))?;
 
-    // Collect all hex byte strings first
-    let hex_strs: Vec<String> = data.iter()
-        .map(|b| format!("{:02X}", b))
-        .collect();
+    let mut chunks = Vec::with_capacity((data.len() + COL_COUNT - 1) / COL_COUNT);
+    let mut row = [const { String::new() }; COL_COUNT];
+    let mut col = 0;
 
-    // Chunk into fixed-size arrays
-    let mut chunks: Vec<[String; COL_COUNT]> = Vec::new();
-    let mut i = 0;
+    for byte in data {
+        row[col] = format!("{:02X}", byte);
+        col += 1;
 
-    while i + COL_COUNT <= hex_strs.len() {
-        let mut arr: [String; COL_COUNT] = std::array::from_fn(|_| String::new());
-        for j in 0..COL_COUNT {
-            arr[j] = hex_strs[i + j].clone();
+        if col == COL_COUNT {
+            chunks.push(row);
+            row = [const { String::new() }; COL_COUNT];
+            col = 0;
         }
-        chunks.push(arr);
-        i += COL_COUNT;
     }
 
-    // Handle final partial chunk if needed
-    if i < hex_strs.len() {
-        let mut arr: [String; COL_COUNT] = std::array::from_fn(|_| String::new());
-        for j in 0..(hex_strs.len() - i) {
-            arr[j] = hex_strs[i + j].clone();
-        }
-        chunks.push(arr);
+    if col > 0 {
+        // Only partially filled row — leave empty strings in remaining slots
+        chunks.push(row);
     }
 
     Ok(chunks)
 }
-
 
 
 const HEX_TABLE: &[u8; 767] = b"\
@@ -140,12 +141,13 @@ F0 F1 F2 F3 F4 F5 F6 F7 F8 F9 FA FB FC FD FE FF";
 
 
 fn get_diffs(lines1: &[[String; COL_COUNT]], lines2: &[[String; COL_COUNT]]) -> HashSet<(usize, usize)> {
-    let mut diffs: HashSet<(usize, usize)> = HashSet::new();
+    let mut diffs = HashSet::with_capacity(lines1.len() * COL_COUNT / 10); // heuristic
 
-    for (i, (line1, line2)) in std::iter::zip(lines1, lines2).enumerate() {
-        for (j, (byte1, byte2)) in std::iter::zip(line1, line2).enumerate() {
-            if byte1 == byte2 { continue }
-            diffs.insert((i, j));
+    for (i, (line1, line2)) in lines1.iter().zip(lines2).enumerate() {
+        for (j, (b1, b2)) in line1.iter().zip(line2).enumerate() {
+            if b1 != b2 {
+                diffs.insert((i, j));
+            }
         }
     }
 
