@@ -5,14 +5,11 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
-use iced::{Application, Color, Command, Element, Event, Font, Pixels, Size, Subscription};
+use iced::{Application, Command, Element, Event, Font, Pixels, Size, Subscription};
 use iced::Settings;
 use biologischer_log::{init_logger, CustomLogger};
 use iced::keyboard::Key;
 use iced::mouse::Event::WheelScrolled;
-use iced::widget::text_editor;
-use iced::widget::text_editor::Content;
-use once_cell::sync::Lazy;
 use crate::scene::{get_diffs, load_data_file_hex, MainScene, COL_COUNT, FONT_SIZE};
 
 #[derive(Debug, Clone)]

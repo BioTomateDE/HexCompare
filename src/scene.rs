@@ -2,13 +2,10 @@
 use std::fs;
 use std::ops::Range;
 use std::path::PathBuf;
-use std::time::Instant;
-use iced::{mouse, Application, Color, Command, Element, Font, Length};
-use iced::Event::{Keyboard, Mouse};
+use iced::{Application, Color, Command, Element, Font, Length};
 use iced::keyboard::Key;
 use iced::keyboard::key::Named::{ArrowDown, ArrowUp};
-use iced::mouse::ScrollDelta;
-use iced::widget::{container, row, Space, Column, text, Row, column, Container};
+use iced::widget::{container, row, Space, Column, text, Row, column};
 use crate::Msg;
 
 
