@@ -1,4 +1,5 @@
 mod scene;
+mod scrollbar;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -16,6 +17,10 @@ use crate::scene::{load_data_file_hex, MainScene, COL_COUNT, FONT_SIZE};
 enum Msg {
     KeyPress(Key),
     Scroll(f32),
+    WindowResized(u32, u32),
+    StartScrollbarDrag,
+    DragScrollbar(f32),
+    EndScrollbarDrag,
 }
 
 struct MyApp {
@@ -61,6 +66,8 @@ impl Application for MyApp {
                     hexdata1,
                     hexdata2,
                     scroll_offset: 0.0,
+                    window_width: WINDOW_SIZE.width,
+                    window_height: WINDOW_SIZE.height,
                 }
             },
             Command::none()
@@ -88,6 +95,7 @@ impl Application for MyApp {
                         None
                     }
                 }
+
                 Event::Mouse(WheelScrolled { delta, .. }) => {
                     let amount = match delta {
                         iced::mouse::ScrollDelta::Lines { y, .. } => y,
@@ -95,6 +103,11 @@ impl Application for MyApp {
                     };
                     Some(Msg::Scroll(amount))
                 }
+
+                Event::Window(_id, iced::window::Event::Resized { width, height }) => {
+                    Some(Msg::WindowResized(width, height))
+                }
+
                 _ => None,
             }
         })
