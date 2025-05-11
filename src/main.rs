@@ -26,24 +26,30 @@ struct MyApp {
     scene: MainScene,
 }
 
+struct MyAppFlags {
+    data1_path: PathBuf,
+    data2_path: PathBuf,
+}
+
+
 const WINDOW_SIZE: Size = Size { width: 800.0, height: 900.0 };
 
 impl Application for MyApp {
     type Executor = iced::executor::Default;
     type Message = Msg;
     type Theme = iced::Theme;
-    type Flags = ();
+    type Flags = MyAppFlags;
 
-    fn new(_flags: Self::Flags) -> (MyApp, Command<Msg>) {
+    fn new(flags: Self::Flags) -> (MyApp, Command<Msg>) {
         log::info!("Started");
 
         let start = Instant::now();
-        let hexdata1: Vec<[String; COL_COUNT]> = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data.win"))
+        let hexdata1: Vec<[String; COL_COUNT]> = load_data_file_hex(&flags.data1_path)
             .expect("Could not data file 1");
         log::info!("Loading data file 1 took {:?}", Instant::now() - start);
 
         let start = Instant::now();
-        let hexdata2: Vec<[String; COL_COUNT]> = load_data_file_hex(&PathBuf::from("C:/Users/BioTomateDE/Documents/RustProjects/LibGM/data_out.win"))
+        let hexdata2: Vec<[String; COL_COUNT]> = load_data_file_hex(&flags.data2_path)
             .expect("Could not data file 2");
         log::info!("Loading data file 2 took {:?}", Instant::now() - start);
 
@@ -127,7 +133,21 @@ impl Application for MyApp {
 }
 
 pub fn main() -> iced::Result {
-    let _logger: Arc<CustomLogger> = init_logger(env!("CARGO_PKG_NAME"));
+    let logger: Arc<CustomLogger> = init_logger(env!("CARGO_PKG_NAME"));
+    let args: Vec<String> = std::env::args().collect();
+
+    let data1_path: PathBuf = PathBuf::from(args.get(1).unwrap_or_else(|| {
+        log::error!("Usage: HexCompare data1_path data2_path");
+        logger.shutdown();
+        std::process::exit(1);
+    }));
+
+    let data2_path: PathBuf = PathBuf::from(args.get(2).unwrap_or_else(|| {
+        log::error!("Usage: HexCompare data1_path data2_path");
+        logger.shutdown();
+        std::process::exit(1);
+    }));
+
 
     let window_settings = iced::window::Settings {
         size: WINDOW_SIZE,
@@ -147,7 +167,10 @@ pub fn main() -> iced::Result {
     let settings = Settings {
         id: Some("HexCompare".to_string()),
         window: window_settings,
-        flags: (),
+        flags: MyAppFlags {
+            data1_path,
+            data2_path,
+        },
         fonts: vec![],
         default_font: Font::DEFAULT,
         default_text_size: Pixels(10.0),
